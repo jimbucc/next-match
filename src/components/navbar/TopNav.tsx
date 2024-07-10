@@ -5,7 +5,6 @@ import NavLink from "./NavLink"
 import { auth } from "@/auth"
 import UserMenu from "./UserMenu"
 
-
 const TopNav = async () => {
     const session = await auth();
   return (
