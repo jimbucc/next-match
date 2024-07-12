@@ -6,39 +6,49 @@ import { ActionResult } from '@/types'
 import bcrypt from 'bcryptjs'
 import { User } from '@prisma/client'
 import { LoginSchema } from '@/lib/schemas/loginschema'
-import { signIn, signOut } from '@/auth'
+import { auth, signIn, signOut } from '@/auth'
 import { AuthError } from 'next-auth'
+import { error } from 'console'
 
-export async function signInUser(data: LoginSchema): Promise<ActionResult<string>> {
+export async function signInUser(
+  data: LoginSchema
+): Promise<ActionResult<string>> {
   try {
     const result = await signIn('credentials', {
       email: data.email,
       password: data.password,
-      redirect: false
+      redirect: false,
     })
     console.log(result)
-    return {status: 'success', data: 'Logged In'}
-
+    return { status: 'success', data: 'Logged In' }
   } catch (error) {
     console.log('Error is:', error)
-    if(error instanceof AuthError) {
+    if (error instanceof AuthError) {
       switch (error.type) {
-        case 'CredentialsSignin': 
-          return {status: 'error', error: 'Invalid Credentials'}
+        case 'CredentialsSignin':
+          return { status: 'error', error: 'Invalid Credentials' }
         default:
-          return { status: 'error', error: 'not credentialssignin error - Something went wrong' }
+          return {
+            status: 'error',
+            error: 'not credentialssignin error - Something went wrong',
+          }
       }
     } else {
-      return {status: 'error', error: 'error is not an AuthError - Something else went wrong'}
+      return {
+        status: 'error',
+        error: 'error is not an AuthError - Something else went wrong',
+      }
     }
   }
 }
 
 export async function signOutUser() {
-  await signOut({redirectTo: '/'})
+  await signOut({ redirectTo: '/' })
 }
 
-export async function registerUser(data: RegisterSchema): Promise<ActionResult<User>> {
+export async function registerUser(
+  data: RegisterSchema
+): Promise<ActionResult<User>> {
   try {
     const validated = registerSchema.safeParse(data)
 
@@ -55,8 +65,7 @@ export async function registerUser(data: RegisterSchema): Promise<ActionResult<U
       },
     })
 
-    if (existingUser) return {status: 'error', error: 'User already exists' }
-
+    if (existingUser) return { status: 'error', error: 'User already exists' }
 
     const user = await prisma.user.create({
       data: {
@@ -66,26 +75,33 @@ export async function registerUser(data: RegisterSchema): Promise<ActionResult<U
       },
     })
 
-    return { status: 'success', data: user}
-  } 
-  catch (error) 
-  {
+    return { status: 'success', data: user }
+  } catch (error) {
     console.log(error)
-    return {status: 'error', error: 'Something went wrong'}
+    return { status: 'error', error: 'Something went wrong' }
   }
 }
 
-export async function getUserByEmail(email:string) {
+export async function getUserByEmail(email: string) {
   return prisma.user.findUnique({
     where: {
-      email
-    }
+      email,
+    },
   })
 }
-export async function getUserById(id:string) {
+export async function getUserById(id: string) {
   return prisma.user.findUnique({
     where: {
-      id
-    }
+      id,
+    },
   })
+}
+
+export const getAuthUserId = async () => {
+  const session = await auth()
+  const userId = session?.user?.id
+
+  if (!userId) throw new Error('Unauthorized')
+
+  return userId
 }
