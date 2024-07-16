@@ -1,10 +1,13 @@
-import { differenceInYears } from "date-fns"
+import { differenceInYears, format } from "date-fns"
 import { FieldValues, Path, UseFormSetError } from "react-hook-form"
 import { ZodIssue } from "zod"
 
 export const calculateAge = (dob: Date) => {
     return differenceInYears(new Date(), dob)
 }
+
+export const formatShortDateTime = (date: Date) => 
+  format(date, 'dd MMM yy h:mm:a')
 
 export function handleFormServerErrors<TFieldValues extends FieldValues>(
     errorResponse: {error: string | ZodIssue[]},
@@ -20,7 +23,7 @@ export function handleFormServerErrors<TFieldValues extends FieldValues>(
         }
     }
 
-export const transformImageUrl = (imageUrl: string | null) => {
+export const transformImageUrl = (imageUrl: string | null | undefined) => {
   if(!imageUrl) return null
   if(!imageUrl.includes('cloudinary')) return imageUrl;
 
@@ -29,4 +32,12 @@ export const transformImageUrl = (imageUrl: string | null) => {
   const transformation = 'c_fill,w_300,h_300,g_faces/'
 
   return `${imageUrl.slice(0, uploadIndex)}${transformation}${imageUrl.slice(uploadIndex)}`
+}
+
+export const truncateString = (text?: string | null, num = 50) => {
+  if(!text) return null
+  if(text.length <= num) return text
+  
+  return text.slice(0,num) + '...'
+
 }

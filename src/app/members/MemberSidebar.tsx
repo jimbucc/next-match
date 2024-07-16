@@ -44,7 +44,7 @@ const MemberSidebar = ({ member, navLinks }: Props) => {
                 pathName === link.href
                   ? 'text-secondary'
                   : 'hover:text-secondary/50'
-              }`}
+              } text-sm md:text-base`}
             >
                 {link.name}
             </Link>
