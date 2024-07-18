@@ -25,7 +25,6 @@ const MessageSidebar = () => {
     const params = new URLSearchParams()
     params.set('container', key)
     router.replace(`${pathName}?${params}`)
-    router.refresh()
   }
 
   return (

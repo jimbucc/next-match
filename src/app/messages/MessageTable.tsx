@@ -56,6 +56,7 @@ const MessageTable = ({ messages }: Props) => {
   const renderCell = useCallback(
     (item: MessageDto, columnKey: keyof MessageDto) => {
       const cellValue = item[columnKey]
+
       switch (columnKey) {
         case 'recipientName':
         case 'senderName':
@@ -74,9 +75,11 @@ const MessageTable = ({ messages }: Props) => {
           )
 
         case 'text':
-          return <div className="truncate">
+          return (
+            <div className="truncate">
                 {truncateString(cellValue, 60)}
             </div>
+            )
         case 'created':
           return cellValue
         default:
@@ -91,7 +94,7 @@ const MessageTable = ({ messages }: Props) => {
           )
       }
     },
-    [isOutBox, isDeleting.loading, isDeleting.id, handleDeleteMesssage]
+    [isOutBox, isDeleting.id, isDeleting.loading, handleDeleteMesssage]
   )
 
   return (

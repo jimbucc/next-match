@@ -1,16 +1,17 @@
 'use server'
 
 import { messageSchema, MessageSchema } from '@/lib/schemas/messageSchema'
-import { ActionResult } from '@/types'
+import { ActionResult, MessageDto } from '@/types'
 import { getAuthUserId } from './authActions'
 import { prisma } from '@/lib/prisma'
-import { Message } from '@prisma/client'
 import { mapMessageToMessageDto } from '@/lib/mappings'
+import { pusherServer } from '@/lib/pusher'
+import { createChatId } from '@/lib/util'
 
 export const createMessage = async (
   recipientUserId: string,
   data: MessageSchema
-): Promise<ActionResult<Message>> => {
+): Promise<ActionResult<MessageDto>> => {
   try {
     const userId = await getAuthUserId()
     const validated = messageSchema.safeParse(data)
@@ -24,8 +25,13 @@ export const createMessage = async (
         recipientId: recipientUserId,
         senderId: userId,
       },
-    })
-    return { status: 'success', data: message }
+      select: messageSelect
+    });
+
+    const messageDto = mapMessageToMessageDto(message)
+    await pusherServer.trigger(createChatId(userId, recipientUserId), 'message:new', messageDto)
+
+    return { status: 'success', data: messageDto }
   } catch (error) {
     console.log(error)
     return { status: 'error', error: 'Something went wrong' }
@@ -54,39 +60,29 @@ export const getMessageThread = async (recipientId: string) => {
       orderBy: {
         created: 'asc',
       },
-      select: {
-        id: true,
-        text: true,
-        created: true,
-        dateRead: true,
-        sender: {
-          select: {
-            userId: true,
-            name: true,
-            image: true,
-          },
-        },
-        recipient: {
-          select: {
-            userId: true,
-            name: true,
-            image: true,
-          },
-        },
-      },
+      select: messageSelect
     })
 
     if (messages.length > 0) {
+      const readMessageIds = messages
+        .filter(m => m.dateRead === null
+            && m.recipient?.userId === userId 
+            && m.sender?.userId === recipientId )
+        .map(m => m.id)
+
+
       await prisma.message.updateMany({
-        where: {
-          senderId: recipientId,
-          recipientId: userId,
-          dateRead: null,
+        where: { 
+          id: {
+            in: readMessageIds
+          }
         },
         data: {
           dateRead: new Date(),
         },
       })
+
+      await pusherServer.trigger(createChatId(recipientId,userId), 'messages:read', readMessageIds)
     }
 
     return messages.map((msg) => mapMessageToMessageDto(msg))
@@ -110,26 +106,7 @@ export const getMessagesByContainer = async (container: string) => {
       orderBy: {
         created: 'desc',
       },
-      select: {
-        id: true,
-        text: true,
-        created: true,
-        dateRead: true,
-        sender: {
-          select: {
-            userId: true,
-            name: true,
-            image: true,
-          },
-        },
-        recipient: {
-          select: {
-            userId: true,
-            name: true,
-            image: true,
-          },
-        },
-      },
+      select: messageSelect
     })
 
     return messages.map((msg) => mapMessageToMessageDto(msg))
@@ -177,4 +154,25 @@ export async function deleteMessage(messageId: string, isOutBox: boolean) {
     console.log(error)
     throw error
   }
+}
+
+const messageSelect = {
+  id: true,
+  text: true,
+  created: true,
+  dateRead: true,
+  sender: {
+    select: {
+      userId: true,
+      name: true,
+      image: true,
+    },
+  },
+  recipient: {
+    select: {
+      userId: true,
+      name: true,
+      image: true,
+    },
+  },
 }
